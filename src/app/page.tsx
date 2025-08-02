@@ -1,103 +1,144 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { PropertyService } from '@/api/property.service';
+import { Property } from '@/common/types';
+import PropertyCard from '@/components/PropertyCard';
+import Link from 'next/link';
+import SearchSection from "@/components/SearchSection";
+
+interface NewsArticle {
+    id: string;
+    title: string;
+    summary: string;
+    imageUrl: string;
+    link: string;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    const [searchLocation, setSearchLocation] = useState('');
+    const [searchPriceMin, setSearchPriceMin] = useState('');
+    const [searchPriceMax, setSearchPriceMax] = useState('');
+    const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+    const [loadingFeatured, setLoadingFeatured] = useState(true);
+    const [errorFeatured, setErrorFeatured] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    const newsArticles: NewsArticle[] = [
+        {
+            id: '1',
+            title: 'Emlak Piyasasında Son Durum',
+            summary: 'Konut fiyatlarındaki artış devam ediyor, kiralık piyasası da hareketli.',
+            imageUrl: '/news1.jpg',
+            link: '#',
+        },
+        {
+            id: '2',
+            title: 'Kentsel Dönüşüm Projeleri Hız Kazanıyor',
+            summary: 'Büyük şehirlerde kentsel dönüşüm projeleriyle yeni yaşam alanları oluşuyor.',
+            imageUrl: '/news2.jpg',
+            link: '#',
+        },
+        {
+            id: '3',
+            title: 'Yatırım İçin En Cazip Bölgeler',
+            summary: 'Uzmanlar, emlak yatırımı için potansiyeli yüksek bölgeleri açıklıyor.',
+            imageUrl: '/news3.jpg',
+            link: '#',
+        },
+    ];
+
+    useEffect(() => {
+        const fetchFeaturedProperties = async () => {
+            try {
+                const allProperties = await PropertyService.getAllProperties();
+                setFeaturedProperties(allProperties.slice(0, 3));
+            } catch (err) {
+                setErrorFeatured('Öne çıkan emlaklar yüklenirken bir hata oluştu.');
+                console.error('API Hatası:', err);
+            } finally {
+                setLoadingFeatured(false);
+            }
+        };
+        fetchFeaturedProperties();
+    }, []);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        const queryParams = new URLSearchParams();
+        if (searchLocation) queryParams.append('location', searchLocation);
+        if (searchPriceMin) queryParams.append('minPrice', searchPriceMin);
+        if (searchPriceMax) queryParams.append('maxPrice', searchPriceMax);
+
+        alert(`Arama Yapıldı:\nKonum: ${searchLocation}\nMin Fiyat: ${searchPriceMin}\nMax Fiyat: ${searchPriceMax}`);
+    };
+
+    return (
+        <main className="min-h-screen bg-gray-100">
+            <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 md:py-32 flex items-center justify-center">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute top-0 left-0 w-full h-full object-cover z-0"
+                >
+                    <source src="/Antalya_Cityscape_Video_Generation.mp4" type="video/mp4" />
+                    Tarayıcınız video etiketini desteklemiyor.
+                </video>
+                <div className="container mx-auto text-center px-4 z-99">
+                    <SearchSection></SearchSection>
+                </div>
+            </section>
+
+            <section className="py-16 bg-white">
+                <div className="container mx-auto px-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-10">Öne Çıkan Emlaklar</h2>
+                    {loadingFeatured ? (
+                        <div className="text-center text-gray-600">Öne çıkan emlaklar yükleniyor...</div>
+                    ) : errorFeatured ? (
+                        <div className="text-center text-red-500">{errorFeatured}</div>
+                    ) : featuredProperties.length === 0 ? (
+                        <div className="text-center text-gray-600">Henüz öne çıkan emlak bulunamadı.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {featuredProperties.map((property) => (
+                                <PropertyCard key={property.id} property={property} />
+                            ))}
+                        </div>
+                    )}
+                    <div className="text-center mt-10">
+                        <Link href="/properties/listing" className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300">
+                            Tüm Emlakları Gör
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            <section className="py-16 bg-gray-100">
+                <div className="container mx-auto px-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-10">Emlak Dünyasından Son Haberler</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {newsArticles.map((article) => (
+                            <div key={article.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                                <img src={article.imageUrl} alt={article.title} className="w-full h-48 object-cover" />
+                                <div className="p-6">
+                                    <h3 className="text-xl font-semibold mb-2 text-gray-800">{article.title}</h3>
+                                    <p className="text-gray-600 mb-4">{article.summary}</p>
+                                    <Link href={article.link} className="text-blue-500 hover:underline font-medium">
+                                        Devamını Oku
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <footer className="bg-gray-800 text-white py-8 text-center">
+                <div className="container mx-auto">
+                    <p>&copy; {new Date().getFullYear()} RealtyTunax. Tüm Hakları Saklıdır.</p>
+                </div>
+            </footer>
+        </main>
+    );
 }
